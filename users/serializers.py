@@ -1,8 +1,9 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.db.models import Model
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from users.models import Profile, Follow, Post
+from users.models import Profile, Follow, Post, Hashtag
 
 
 class AuthTokenSerializer(serializers.Serializer):
@@ -116,6 +117,11 @@ class FollowerSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     author = UserProfileSerializer(read_only=True)
+    hashtags = serializers.ListField(
+        child=serializers.CharField(max_length=20),
+        required=False,
+        write_only=True
+    )
 
     class Meta:
         model = Post
@@ -124,6 +130,37 @@ class PostSerializer(serializers.ModelSerializer):
             "author",
             "content",
             "image",
+            "hashtags",
             "created_at",
             "updated_at",
+        ]
+
+    def create(self, validated_data):
+        hashtags = validated_data.pop("hashtags", [])
+        post = Post.objects.create(**validated_data)
+        tags = []
+
+        for hashtag in hashtags:
+            tag, _ = Hashtag.objects.get_or_create(
+                name=hashtag
+            )
+            tags.append(tag)
+
+        post.hashtags.set(tags)
+        return post
+
+
+class HashtagSerializer(serializers.ModelSerializer):
+    def validate_name(self, value):
+        if value.startswith("#"):
+            raise serializers.ValidationError(
+                "Should not start with #."
+            )
+
+        return value
+
+    class Meta:
+        model = Hashtag
+        fields = [
+            "name"
         ]

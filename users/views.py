@@ -131,7 +131,9 @@ class PostView(viewsets.ModelViewSet):
     )
 
     def get_queryset(self):
-        queryset = Post.objects.select_related("author")
+        queryset = (Post.objects
+                    .select_related("author")
+                    .prefetch_related("hashtags"))
 
         if self.action == "list":
             following_ids = Follow.objects.filter(
@@ -145,6 +147,11 @@ class PostView(viewsets.ModelViewSet):
                 Q(author=self.request.user)
                 | Q(author_id__in=following_ids)
             )
+            hashtag = self.request.query_params.get("hashtag")
+            if hashtag:
+                queryset = queryset.filter(
+                    hashtags__name__iexact=hashtag
+                )
 
         return queryset.order_by("-created_at")
 

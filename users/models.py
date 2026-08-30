@@ -117,6 +117,18 @@ def post_image_path(instance: "Post", filename: str) -> pathlib.Path:
     return pathlib.Path("uploads/post_image/") / filename
 
 
+class Hashtag(models.Model):
+    name = models.CharField(max_length=20, unique=True)
+
+    def clean(self):
+        if self.name.startswith("#"):
+            raise ValidationError("Name should not start with #")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
 class Post(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -129,5 +141,6 @@ class Post(models.Model):
         null=True,
         blank=True
     )
+    hashtags = models.ManyToManyField(Hashtag, related_name="posts", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
