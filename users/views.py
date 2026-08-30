@@ -3,14 +3,15 @@ from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.settings import api_settings
-from rest_framework import generics
+from rest_framework import generics, viewsets
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.models import Profile, Follow
+from users.models import Profile, Follow, Post
+from users.permission import IsOwnerOrReadOnly
 from users.serializers import AuthTokenSerializer, UserSerializer, ProfileSerializer, FollowSerializer, \
-    FollowerSerializer
+    FollowerSerializer, PostSerializer
 
 
 class CreateTokenView(ObtainAuthToken):
@@ -120,3 +121,32 @@ class FollowProfileView(APIView):
 
         follow.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PostView(viewsets.ModelViewSet):
+    serializer_class = PostSerializer
+    permission_classes = (
+        IsAuthenticated,
+        IsOwnerOrReadOnly,
+    )
+
+    def get_queryset(self):
+        queryset = Post.objects.select_related("author")
+
+        if self.action == "list":
+            following_ids = Follow.objects.filter(
+                follower=self.request.user
+            ).values_list(
+                "following_id",
+                flat=True,
+            )
+
+            queryset = queryset.filter(
+                Q(author=self.request.user)
+                | Q(author_id__in=following_ids)
+            )
+
+        return queryset.order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)

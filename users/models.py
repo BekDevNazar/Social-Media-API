@@ -107,3 +107,27 @@ class Follow(models.Model):
                 name="unique_follow",
             )
         ]
+
+
+def post_image_path(instance: "Post", filename: str) -> pathlib.Path:
+    filename = (
+        f"{instance.author_id}--{uuid.uuid4()}"
+        + pathlib.Path(filename).suffix
+    )
+    return pathlib.Path("uploads/post_image/") / filename
+
+
+class Post(models.Model):
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="posts"
+    )
+    content = models.TextField()
+    image = models.ImageField(
+        upload_to=post_image_path,
+        null=True,
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

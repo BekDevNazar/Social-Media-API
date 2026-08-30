@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 
 from users.views import (
     CreateTokenView,
@@ -10,9 +11,15 @@ from users.views import (
     ManageProfileView,
     ProfileDetailView,
     ProfileListView,
+    PostView,
 )
 
+
+router = DefaultRouter()
+router.register("posts", PostView, basename="post")
+
 urlpatterns = [
+    path("", include(router.urls)),
     path("register/", CreateUserView.as_view(), name="create"),
     path("login/", CreateTokenView.as_view(), name="login"),
     path("profile/me/", ManageProfileView.as_view(), name="profile-manage"),
