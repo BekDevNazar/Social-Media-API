@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from users.models import Profile
+from users.models import Profile, Follow
 
 
 class AuthTokenSerializer(serializers.Serializer):
@@ -89,4 +89,24 @@ class ProfileSerializer(serializers.ModelSerializer):
             "user",
             "bio",
             "image"
+        ]
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    following = UserProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Follow
+        fields = [
+            "following",
+        ]
+
+
+class FollowerSerializer(serializers.ModelSerializer):
+    follower = UserProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Follow
+        fields = [
+            "follower",
         ]

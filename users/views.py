@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.settings import api_settings
@@ -7,8 +8,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.models import Profile
-from users.serializers import AuthTokenSerializer, UserSerializer, ProfileSerializer
+from users.models import Profile, Follow
+from users.serializers import AuthTokenSerializer, UserSerializer, ProfileSerializer, FollowSerializer, \
+    FollowerSerializer
 
 
 class CreateTokenView(ObtainAuthToken):
@@ -46,12 +48,75 @@ class ProfileListView(generics.ListAPIView):
     serializer_class = ProfileSerializer
     permission_classes = (IsAuthenticated,)
 
-
     def get_queryset(self):
-        queryset = Profile.objects.all()
+        queryset = Profile.objects.select_related("user")
         search = self.request.query_params.get("search")
 
         if search:
-            queryset = queryset.filter(Q(user__first_name__icontains=search)
-                                       | Q(user__last_name__icontains=search))
+            queryset = queryset.filter(
+                Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+            )
+
         return queryset
+
+
+class FollowingMeView(generics.ListAPIView):
+    serializer_class = FollowSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return Follow.objects.filter(
+            follower=self.request.user
+        )
+
+
+class FollowersMeView(generics.ListAPIView):
+    serializer_class = FollowerSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return Follow.objects.filter(
+            following=self.request.user
+        )
+
+
+class FollowProfileView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk):
+        profile = get_object_or_404(Profile, pk=pk)
+
+        if profile.user == request.user:
+            return Response(
+                {"detail": "You cannot follow yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        follow, created = Follow.objects.get_or_create(
+            follower=request.user,
+            following=profile.user
+        )
+
+        if not created:
+            return Response(
+                {"detail": "You already follow this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {"detail": "Followed successfully."},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, pk):
+        profile = get_object_or_404(Profile, pk=pk)
+
+        follow = get_object_or_404(
+            Follow,
+            follower=request.user,
+            following=profile.user,
+        )
+
+        follow.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
