@@ -3,7 +3,7 @@ from django.db.models import Model
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from users.models import Profile, Follow, Post, Hashtag
+from users.models import Profile, Follow, Post, Hashtag, Like
 
 
 class AuthTokenSerializer(serializers.Serializer):
@@ -122,6 +122,7 @@ class PostSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True
     )
+    likes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Post
@@ -133,6 +134,7 @@ class PostSerializer(serializers.ModelSerializer):
             "hashtags",
             "created_at",
             "updated_at",
+            "likes_count",
         ]
 
     def create(self, validated_data):

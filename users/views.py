@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.models import Profile, Follow, Post
+from users.models import Profile, Follow, Post, Like
 from users.permission import IsOwnerOrReadOnly
 from users.serializers import AuthTokenSerializer, UserSerializer, ProfileSerializer, FollowSerializer, \
     FollowerSerializer, PostSerializer
@@ -153,7 +153,55 @@ class PostView(viewsets.ModelViewSet):
                     hashtags__name__iexact=hashtag
                 )
 
-        return queryset.order_by("-created_at")
+        return (queryset.order_by("-created_at")
+                .annotate(likes_count=Count("likes")))
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+
+class LikeView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+
+        like, created = Like.objects.get_or_create(
+            user=request.user,
+            post=post
+        )
+        if not created:
+            return Response(
+                {"detail": "You already liked this post."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            {"detail": "Liked successfully."},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+
+        like = get_object_or_404(
+            Like,
+            user=request.user,
+            post=post
+        )
+        like.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class LikedPostsView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PostSerializer
+
+    def get_queryset(self):
+        return (
+            Post.objects
+            .filter(likes__user=self.request.user)
+            .select_related("author")
+            .prefetch_related("hashtags")
+            .annotate(likes_count=Count("likes"))
+            .order_by("-created_at")
+        )
