@@ -1,6 +1,9 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext as _
+
+from django.utils import timezone
 from rest_framework import serializers
+
 
 from users.models import Profile, Follow, Post, Hashtag, Comment
 
@@ -185,3 +188,21 @@ class CommentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class SchedulePostSerializer(serializers.Serializer):
+    content = serializers.CharField()
+    hashtags = serializers.ListField(
+        child=serializers.CharField(max_length=20),
+        required=False,
+        default=list,
+    )
+    scheduled_at = serializers.DateTimeField()
+
+    def validate_scheduled_at(self, value):
+        if value <= timezone.now():
+            raise serializers.ValidationError(
+                "Scheduled time must be in the future."
+            )
+
+        return value

@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from users.tasks import create_scheduled_post
 from users.models import Profile, Follow, Post, Like, Comment
 from users.permission import IsOwnerOrReadOnly
 from users.serializers import (
@@ -17,7 +18,7 @@ from users.serializers import (
     FollowSerializer,
     FollowerSerializer,
     PostSerializer,
-    CommentSerializer
+    CommentSerializer, SchedulePostSerializer
 )
 
 
@@ -241,3 +242,31 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CommentSerializer
 
     queryset = Comment.objects.select_related("author")
+
+
+class SchedulePostView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = SchedulePostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
+        task = create_scheduled_post.apply_async(
+            args=[
+                request.user.id,
+                data["content"],
+                data["hashtags"],
+            ],
+            eta=data["scheduled_at"],
+        )
+
+        return Response(
+            {
+                "detail": "Post scheduled successfully.",
+                "task_id": task.id,
+                "scheduled_at": data["scheduled_at"],
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )

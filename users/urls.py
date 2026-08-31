@@ -16,6 +16,7 @@ from users.views import (
     LikeView,
     LikedPostsView,
     CommentDetailView,
+    SchedulePostView,
 )
 
 
@@ -23,6 +24,11 @@ router = DefaultRouter()
 router.register("posts", PostView, basename="post")
 
 urlpatterns = [
+    path(
+        "posts/schedule/",
+        SchedulePostView.as_view(),
+        name="schedule-post",
+    ),
     path("", include(router.urls)),
     path("register/", CreateUserView.as_view(), name="create"),
     path("login/", CreateTokenView.as_view(), name="login"),
@@ -60,5 +66,5 @@ urlpatterns = [
         "comments/<int:pk>/",
         CommentDetailView.as_view(),
         name="comment-detail",
-),
+    ),
 ]
