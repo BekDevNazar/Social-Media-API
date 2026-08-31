@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework.views import APIView
 
 from users.views import (
     CreateTokenView,
@@ -12,9 +11,11 @@ from users.views import (
     ManageProfileView,
     ProfileDetailView,
     ProfileListView,
+    PostCommentsView,
     PostView,
     LikeView,
     LikedPostsView,
+    CommentDetailView,
 )
 
 
@@ -49,5 +50,15 @@ urlpatterns = [
         name="profile-follow",
     ),
     path("posts/<int:pk>/like/", LikeView.as_view(), name="like"),
-    path("profile/me/liked-posts/", LikedPostsView.as_view(), name="my-like")
+    path("profile/me/liked-posts/", LikedPostsView.as_view(), name="my-like"),
+    path(
+        "posts/<int:pk>/comments/",
+        PostCommentsView.as_view(),
+        name="post-comments",
+    ),
+    path(
+        "comments/<int:pk>/",
+        CommentDetailView.as_view(),
+        name="comment-detail",
+),
 ]

@@ -1,9 +1,8 @@
 from django.contrib.auth import authenticate, get_user_model
-from django.db.models import Model
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from users.models import Profile, Follow, Post, Hashtag, Like
+from users.models import Profile, Follow, Post, Hashtag, Comment
 
 
 class AuthTokenSerializer(serializers.Serializer):
@@ -165,4 +164,24 @@ class HashtagSerializer(serializers.ModelSerializer):
         model = Hashtag
         fields = [
             "name"
+        ]
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = UserProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = [
+            "id",
+            "author",
+            "content",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "author",
+            "created_at",
+            "updated_at",
         ]

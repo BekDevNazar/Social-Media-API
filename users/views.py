@@ -8,10 +8,17 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.models import Profile, Follow, Post, Like
+from users.models import Profile, Follow, Post, Like, Comment
 from users.permission import IsOwnerOrReadOnly
-from users.serializers import AuthTokenSerializer, UserSerializer, ProfileSerializer, FollowSerializer, \
-    FollowerSerializer, PostSerializer
+from users.serializers import (
+    AuthTokenSerializer,
+    UserSerializer,
+    ProfileSerializer,
+    FollowSerializer,
+    FollowerSerializer,
+    PostSerializer,
+    CommentSerializer
+)
 
 
 class CreateTokenView(ObtainAuthToken):
@@ -205,3 +212,32 @@ class LikedPostsView(generics.ListAPIView):
             .annotate(likes_count=Count("likes"))
             .order_by("-created_at")
         )
+
+
+class PostCommentsView(generics.ListCreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CommentSerializer
+
+    def get_queryset(self):
+        return (
+            Comment.objects
+            .filter(post_id=self.kwargs["pk"])
+            .select_related("author")
+            .order_by("created_at")
+        )
+    def perform_create(self, serializer):
+        post = get_object_or_404(
+            Post,
+            pk=self.kwargs["pk"]
+        )
+        serializer.save(
+            author=self.request.user,
+            post=post
+        )
+
+
+class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (IsAuthenticated, IsOwnerOrReadOnly)
+    serializer_class = CommentSerializer
+
+    queryset = Comment.objects.select_related("author")
