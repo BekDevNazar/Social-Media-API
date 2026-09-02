@@ -5,7 +5,10 @@ from rest_framework.test import APITestCase
 
 from users.models import Post, Follow, Hashtag
 
+
 url_list = reverse("post-list")
+
+
 def get_post_detail_url(post: Post):
     return reverse("post-detail", args=[post.id])
 

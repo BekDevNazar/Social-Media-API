@@ -60,7 +60,6 @@ def profile_image_path(instance: "Profile", filename: str) -> pathlib.Path:
     return pathlib.Path("uploads/profile_image/") / filename
 
 
-
 class Profile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

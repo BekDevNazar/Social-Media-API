@@ -97,4 +97,3 @@ class FollowApiTests(APITestCase):
                 following=other_user,
             ).exists()
         )
-
