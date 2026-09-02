@@ -7,6 +7,7 @@ from rest_framework import generics, viewsets
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 from users.tasks import create_scheduled_post
 from users.models import Profile, Follow, Post, Like, Comment
@@ -42,6 +43,14 @@ class ManageProfileView(generics.RetrieveUpdateAPIView):
 class LogoutView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        request=None,
+        responses={
+            204: OpenApiResponse(
+                description="Logged out successfully."
+            ),
+        },
+    )
     def post(self, request):
         request.auth.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -56,6 +65,20 @@ class ProfileDetailView(generics.RetrieveAPIView):
 class ProfileListView(generics.ListAPIView):
     serializer_class = ProfileSerializer
     permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="search",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Search users by first or last name",
+                required=False,
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = Profile.objects.select_related("user")
@@ -93,6 +116,17 @@ class FollowersMeView(generics.ListAPIView):
 class FollowProfileView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        request=None,
+        responses={
+            201: OpenApiResponse(
+                description="User followed successfully."
+            ),
+            400: OpenApiResponse(
+                description="Cannot follow this user."
+            ),
+        },
+    )
     def post(self, request, pk):
         profile = get_object_or_404(Profile, pk=pk)
 
@@ -118,6 +152,14 @@ class FollowProfileView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(
+        request=None,
+        responses={
+            204: OpenApiResponse(
+                description="User unfollowed successfully."
+            ),
+        },
+    )
     def delete(self, request, pk):
         profile = get_object_or_404(Profile, pk=pk)
 
@@ -137,6 +179,20 @@ class PostView(viewsets.ModelViewSet):
         IsAuthenticated,
         IsOwnerOrReadOnly,
     )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="hashtag",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Filter posts by hashtag",
+                required=False,
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = (Post.objects
@@ -171,6 +227,17 @@ class PostView(viewsets.ModelViewSet):
 class LikeView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        request=None,
+        responses={
+            201: OpenApiResponse(
+                description="Post liked successfully."
+            ),
+            400: OpenApiResponse(
+                description="Post already liked."
+            ),
+        },
+    )
     def post(self, request, pk):
         post = get_object_or_404(Post, pk=pk)
 
@@ -188,6 +255,14 @@ class LikeView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(
+        request=None,
+        responses={
+            204: OpenApiResponse(
+                description="Like removed successfully."
+            ),
+        },
+    )
     def delete(self, request, pk):
         post = get_object_or_404(Post, pk=pk)
 
@@ -247,6 +322,14 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
 class SchedulePostView(APIView):
     permission_classes = (IsAuthenticated,)
 
+    @extend_schema(
+        request=SchedulePostSerializer,
+        responses={
+            202: OpenApiResponse(
+                description="Post successfully scheduled."
+            ),
+        },
+    )
     def post(self, request):
         serializer = SchedulePostSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
