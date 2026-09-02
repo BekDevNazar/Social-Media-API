@@ -26,7 +26,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = []
 
@@ -107,6 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
